@@ -1,0 +1,158 @@
+{
+  "name": "SSL Certificate Expiry Notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\n\nconst expiryDate = new Date(item.valid_to);\nconst today = new Date();\nconst daysLeft = Math.floor((expiryDate - today) / (1000 * 60 * 60 * 24));\n\nlet status, emoji;\nif (daysLeft <= 0) { status = 'EXPIRED'; emoji = '🔴'; }\nelse if (daysLeft <= 14) { status = 'CRITICAL'; emoji = '🚨'; }\nelse if (daysLeft <= 30) { status = 'WARNING'; emoji = '⚠️'; }\nelse { status = 'HEALTHY'; emoji = '✅'; }\n\nreturn {\n  json: {\n    domain: item.domain,\n    daysLeft: daysLeft,\n    expiryDate: item.valid_to,\n    issuer: item.issuer,\n    status: status,\n    emoji: emoji,\n    needsAlert: daysLeft <= 30\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "a9ed398f-e782-4a62-bb49-342a6bff1d76",
+      "name": "Certificate Analyzer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d85f3712-9116-4deb-8386-e82d143e585e",
+              "leftValue": "={{ $json.needsAlert }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        528,
+        -16
+      ],
+      "id": "38d9df5f-a887-4900-8a0f-74fdf5abb368",
+      "name": "Alert Filter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.sh/ssl-monitor-nepal123",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"SSL Certificate Alert!\",\n  \"message\": \"={{ $json.emoji + ' ' + $json.domain + ' expires in ' + $json.daysLeft + ' days on ' + $json.expiryDate }}\",\n  \"priority\": 5,\n  \"tags\": [\"warning\"]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        -96
+      ],
+      "id": "e0836aff-a3e4-4a15-871d-00c6565f9713",
+      "name": "Alert Notification"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.sh/ssl-monitor-nepal123",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"SSL Status: Healthy\",\n  \"message\": \"={{ '✅ ' + $json.domain + ' is healthy — ' + $json.daysLeft + ' days remaining' }}\",\n  \"priority\": 1,\n  \"tags\": [\"white_check_mark\"]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        160
+      ],
+      "id": "1e21ad93-d2cd-4dcc-b770-ae0204897750",
+      "name": "Healthy Notification"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ssl-check",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        -16
+      ],
+      "id": "b7562c69-93c3-413c-966e-a72b4bf93e6f",
+      "name": "Webhook",
+      "webhookId": "444592c9-2e31-4be4-958f-884e46b2b7df"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Certificate Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Alert Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Filter": {
+      "main": [
+        [
+          {
+            "node": "Alert Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Healthy Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Certificate Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6824ec31-208f-412f-8f81-23c6bdddf519",
+  "meta": {
+    "instanceId": "033a8d6a36f8a99113448710f4358da4ef7000caebd64cc2e5cc3ff561b0118b"
+  },
+  "id": "d7MYJz61GNvhsfRz",
+  "tags": []
+}
