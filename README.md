@@ -3,6 +3,9 @@
 Automatically monitors SSL certificates and sends 
 phone notifications before they expire.
 
+<img width="1365" height="647" alt="Screenshot 2026-06-24 030813" src="https://github.com/user-attachments/assets/0acc2974-7e44-49b6-a210-97c76f2913b5" />
+
+
 ## What it does
 - Checks SSL certificates for multiple domains daily
 - Calculates days until expiration
